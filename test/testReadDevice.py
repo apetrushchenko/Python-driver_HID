@@ -1,11 +1,20 @@
+import ctypes
+
+from HidDeviceData import HidDeviceData
+from HidReport import HidReport
+
+ctypes.CDLL('[my path to the DLL]\\hidapi.dll')
 import  hid
-from src.utils import Utils
+import threading
+
+from utils import Utils
 import time
 
 class hidTest:
 
     def __init__(self):
 
+        self.timer_interval = 10
 
         self.__device = None
         self.__device_vid = 1155
@@ -14,6 +23,9 @@ class hidTest:
         self.__c1_pid = 22352
         self.__cms_pid = 22353
         self.__ga_pid = 22354
+
+        self.__attached = False
+
         self.__report_id_read = 1
         self.__report_id_write = 2
         self.__test_tim = 0
@@ -88,6 +100,7 @@ class hidTest:
         self.__on = 0xFFFF
         self.__off = 0
 
+        self.__timer = threading.Timer(self.timer_interval, objDev.timer_OnTick()  )
     @property
     def Device(self)->None:
         return self.__device
@@ -95,6 +108,21 @@ class hidTest:
     @property.setter
     def Device(self, value):
         self.__device = value
+
+    @property
+    def Attached(self)->bool:
+        return self.__attached
+
+    @property.setter
+    def Attached(self, value):
+        self.__attached  = value
+        if( self.__attached ):
+            self.__timer.Start()
+        else:
+            self.__temer.Stop()
+
+
+
     def ReadDevice(self) -> None:
         self.__devices = (Utils.newArray(4, None))
         self.__devices[0] = hid.enumerate(self.__device_vid, self.__v1_pid)
@@ -125,12 +153,11 @@ class hidTest:
             seft.__devNN ="V1"
             self.device = self.__devices[0]
 
-
     def Start(self):
-        pass
+        self.__attached = True
 
-    def Finish(self):
-        pass
+    def Stop(self):
+        self.__attached = False
 
     def HID_Send_CMD_TopLight(self, value ):
         self.HID_Send_Comand( self.__reg_2, int(value))
@@ -319,46 +346,36 @@ class hidTest:
         """
 
 
-def __hID_Write(self, bufer: bytearray) -> None:
-    bufer[0] = (2)
-    self.__device.WriteReport(
-        HidReport(
-            self.__report_length,
-            HidDeviceData(
-                bufer,
-                HidDeviceData.ReadStatus.Success)))  # error
+    def __hID_Write(self, bufer: bytearray) -> None:
+        bufer[0] = (2)
+        self.__device.WriteReport( HidReport( self.__report_length,HidDeviceData(  bufer,HidDeviceData.ReadStatus.SUCCESS)))
+        #return buffer
 
 
 
-    def __timer2_Tick(self, sender: object, e0_: ERROR(type=EventArgs)) -> None:
+    def timer_OnTick(self) -> None:
         # **** INPUT *****////
         if (len(self.__buffer_usb_tx) > 60):
             pass
 
     @staticmethod
-    def onReport( report: HidReport) -> None:
+    def onReport(self, report: HidReport) -> None:
         """ Читати USB буфер
-
         Args:
             report(HidReport):
         """
-        if (
-                self.__attached == False):
-            pass
-        else:
-            self.__buffer_usb_tx = (
-                report.Data)
+        if (self.__attached):
+            self.__buffer_usb_tx =  report.Data
 
     @staticmethod
-    def __deviceAttachedHandler(self) -> None:
+    def deviceAttachedHandler(self) -> None:
         """ Включити Подію читання USB """
         self.__attached = True
-        self.__device.ReadReport(
-            OnReport)  # error
+        self.__device.ReadReport(self.OnReport)  # error
     
     
     @staticmethod
-    def __deviceRemovedHandler(self) -> None:
+    def deviceRemovedHandler(self) -> None:
         """ USB відключено(помилка) """
         self.__attached = False
     
@@ -370,13 +387,15 @@ try:
     objDev.ReadDevice()
 
     if objDev.Device is not None:
-        objDev.Device.OpenDevice()
-        objDev.Device.Inserted += (DeviceAttachedHandler)
-        objDev.Device.Removed += (DeviceRemovedHandler)
+        objDev.Device.OpenDevice( )
+        objDev.Device.Inserted += (objDev.deviceAttachedHandler)
+        objDev.Device.Removed += (objDev.deviceRemoveHandler)
         objDev.Device.MonitorDeviceEvents = (True)
-        objDev.Device.ReadReport(OnReport)  # error
+        objDev.Device.ReadReport(objDev.OnReport)
 
-        value = input( "Top light, set value as 0=500 =>"    )
+    objDev.Start()
+
+    value = input( "Top light, set value as 0=500 =>"    )
     objDev.HID_Send_CMD_TopLight(value)
     value = input( "Back light, set value as 0=500 =>"   )
     objDev.HID_Send_CMD_TopLight(value)
@@ -386,4 +405,6 @@ try:
     #objDev.HID_Send_CMD_TopLight(value)
 
 finally:
-    objDev.Finish()
+    objDev.Stop()
+
+

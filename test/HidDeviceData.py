@@ -1,5 +1,5 @@
 ﻿from enum import IntEnum
-from src.utils import Utils
+from utils import Utils
 
 class HidDeviceData:
     
@@ -14,8 +14,7 @@ class HidDeviceData:
         @classmethod
         def has_value(cls, value):
             return any(value == item.value for item in cls)
-
-
+    
     @property
     def data(self) -> bytearray:
         return self.__data
