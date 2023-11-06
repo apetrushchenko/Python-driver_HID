@@ -14,7 +14,8 @@ class HidDeviceData:
         @classmethod
         def has_value(cls, value):
             return any(value == item.value for item in cls)
-    
+
+
     @property
     def data(self) -> bytearray:
         return self.__data
