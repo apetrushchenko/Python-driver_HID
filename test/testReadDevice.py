@@ -1,10 +1,12 @@
 import ctypes
 
+import  hid
+
 from HidDeviceData import HidDeviceData
 from HidReport import HidReport
 
-ctypes.CDLL('[my path to the DLL]\\hidapi.dll')
-import  hid
+#ctypes.CDLL('[my path to the DLL]\\hidapi.dll')
+
 import threading
 
 from utils import Utils
@@ -17,6 +19,7 @@ class hidTest:
         self.timer_interval = 10
 
         self.__device = None
+        self.__devices = None
         self.__device_vid = 1155
         self.__device_pid = 22352
         self.__v1_pid = 22351
@@ -99,22 +102,24 @@ class hidTest:
         self.__reg_60 = 60
         self.__on = 0xFFFF
         self.__off = 0
+        self.__timer = None
 
-        self.__timer = threading.Timer(self.timer_interval, objDev.timer_OnTick()  )
-    @property
-    def Device(self)->None:
+
+
+    #@property
+    def get_Device(self)->None:
         return self.__device
 
-    @property.setter
-    def Device(self, value):
+    #@property.setter
+    def set_Device(self, value):
         self.__device = value
 
-    @property
-    def Attached(self)->bool:
+    #@property
+    def get_Attached(self)->bool:
         return self.__attached
 
-    @property.setter
-    def Attached(self, value):
+    #@property.setter
+    def set_Attached(self, value):
         self.__attached  = value
         if( self.__attached ):
             self.__timer.Start()
@@ -135,28 +140,27 @@ class hidTest:
         print("HID.ReadDevice(): dev2 = {0}", self.__devices[2])
         print("HID.ReadDevice(): dev3 = {0}", self.__devices[3])
 
-        if self.device[3] is not None :
-            seft.__devNN ="GLA"
-            self.device = self.__devices[3]
+        if str(self.__devices[3]) != '[]':
+            self.__devNN ="GLA"
+            self.set_Device ( self.__devices[3])
 
-        if self.device[2] is not None :
-            seft.__devNN ="CMS"
-            self.device = self.__devices[2]
+        if str(self.__devices[2]) != '[]' :
+            self.__devNN ="CMS"
+            self.set_Device ( self.__devices[2])
 
+        if str(self.__devices[1]) != '[]':
+            self.__devNN ="V1"
+            self.set_Device(self.__devices[1])
 
-        if self.device[1] is not None :
-            seft.__devNN ="V1"
-            self.device = self.__devices[1]
+        if str(self.__devices[0]) != '[]':
+            self.__devNN ="V1"
+            self.set_Device(self.__devices[0])
 
-
-        if self.device[0] is not None :
-            seft.__devNN ="V1"
-            self.device = self.__devices[0]
-
-    def Start(self):
+    def start(self):
+        self.__timer = threading.Timer(self.timer_interval, self.timer_OnTick())
         self.__attached = True
 
-    def Stop(self):
+    def stop(self):
         self.__attached = False
 
     def HID_Send_CMD_TopLight(self, value ):
@@ -379,21 +383,35 @@ class hidTest:
         """ USB відключено(помилка) """
         self.__attached = False
     
-    
+objDev = None
+
 try:
     objDev = hidTest()
-    objDev.Start()
+
+    #objDev.start()
 
     objDev.ReadDevice()
 
-    if objDev.Device is not None:
-        objDev.Device.OpenDevice( )
-        objDev.Device.Inserted += (objDev.deviceAttachedHandler)
-        objDev.Device.Removed += (objDev.deviceRemoveHandler)
-        objDev.Device.MonitorDeviceEvents = (True)
-        objDev.Device.ReadReport(objDev.OnReport)
 
-    objDev.Start()
+    tmpDev = objDev.get_Device()
+
+    if str(tmpDev) != "[]":
+        vendor_idx = tmpDev[0]['vendor_id']
+        product_idx = tmpDev[0]['product_id']
+        device = hid.HIDDeviceFilter(vendor_id=vendor_idx, product_id=vendor_idx).get_device()[0]
+        hid.device.open(vendor_id, product_id)
+
+        hid.Device(vendor_id, product_id)().Inserted += (objDev.deviceAttachedHandler)
+        hid.Device(vendor_id, product_id)().Removed += (objDev.deviceRemoveHandler)
+        hid.Device(vendor_id, product_id)().MonitorDeviceEvents = (True)
+        hid.Device(vendor_id, product_id)().ReadReport(objDev.OnReport)
+
+
+
+
+    objDev.start()
+
+
 
     value = input( "Top light, set value as 0=500 =>"    )
     objDev.HID_Send_CMD_TopLight(value)
@@ -404,7 +422,12 @@ try:
     value = input( "Frecency, set value as 0=500 =>"     )
     #objDev.HID_Send_CMD_TopLight(value)
 
-finally:
-    objDev.Stop()
+except Exception as AnyError:
+    print( f"Unexpected {AnyError} " )
 
+finally:
+    if objDev is None:
+        pass
+    else:
+        objDev.Stop()
 
