@@ -1,16 +1,14 @@
-import ctypes
+import struct
+import threading
 
-import  hid
+import usb.core
+import usb.util
 
 from HidDeviceData import HidDeviceData
 from HidReport import HidReport
-
-#ctypes.CDLL('[my path to the DLL]\\hidapi.dll')
-
-import threading
-
 from utils import Utils
-import time
+
+# ctypes.CDLL('[my path to the DLL]\\hidapi.dll')
 
 class hidTest:
 
@@ -18,21 +16,24 @@ class hidTest:
 
         self.timer_interval = 10
 
+        self.__report_length = 64
+
         self.__device = None
         self.__devices = None
-        self.__device_vid = 1155
-        self.__device_pid = 22352
-        self.__v1_pid = 22351
-        self.__c1_pid = 22352
-        self.__cms_pid = 22353
-        self.__ga_pid = 22354
-
+        self._device_vid = 1155
+        self._device_pid = 22352
+        self._v1_pid = 22351
+        self._c1_pid = 22352
+        self._cms_pid = 22353
+        self._ga_pid = 22354
+        self.product_array_pid = [ self._v1_pid, self._c1_pid, self._cms_pid, self._ga_pid]
+        self.product_array_nm  = [ "V1", "C1", "CMS", "GLA"]
         self.__attached = False
 
         self.__report_id_read = 1
         self.__report_id_write = 2
         self.__test_tim = 0
-    
+
         self.__page = 66
         self.__buffer_usb_rx = None
         self.__buffer_usb_tx = None
@@ -104,8 +105,6 @@ class hidTest:
         self.__off = 0
         self.__timer = None
 
-
-
     #@property
     def get_Device(self)->None:
         return self.__device
@@ -126,38 +125,27 @@ class hidTest:
         else:
             self.__temer.Stop()
 
-
-
     def ReadDevice(self) -> None:
+
         self.__devices = (Utils.newArray(4, None))
-        self.__devices[0] = hid.enumerate(self.__device_vid, self.__v1_pid)
-        self.__devices[1] = hid.enumerate(self.__device_vid, self.__c1_pid)  # error .FirstOrDefault() # error )
-        self.__devices[2] = hid.enumerate(self.__device_vid,self.__cms_pid)  # error .FirstOrDefault() # error )
-        self.__devices[3] = hid.enumerate(self.__device_vid, self.__ga_pid)  # error .FirstOrDefault() # error )
 
-        print("HID.ReadDevice(): dev0 = {0}", self.__devices[0])
-        print("HID.ReadDevice(): dev1 = {0}", self.__devices[1])
-        print("HID.ReadDevice(): dev2 = {0}", self.__devices[2])
-        print("HID.ReadDevice(): dev3 = {0}", self.__devices[3])
+        counter = 0
+        for prod_id in self.product_array_pid:
 
-        if str(self.__devices[3]) != '[]':
-            self.__devNN ="GLA"
-            self.set_Device ( self.__devices[3])
+            self.__devices[ counter ] = usb.core.find(self._device_vid, prod_id )
 
-        if str(self.__devices[2]) != '[]' :
-            self.__devNN ="CMS"
-            self.set_Device ( self.__devices[2])
+            if str(self.__devices[counter]) is not None:
+                self.__devNN = self.product_array_nm[counter]
+                self.set_Device( self.__devices[ counter ])
 
-        if str(self.__devices[1]) != '[]':
-            self.__devNN ="V1"
-            self.set_Device(self.__devices[1])
+            print("HID.ReadDevice(): dev = " + str(counter)+", vid="+str(self.__devices[counter])+", pid=" + str(prod_id), str(self.__devices[counter]))
+            counter = counter + 1
 
-        if str(self.__devices[0]) != '[]':
-            self.__devNN ="V1"
-            self.set_Device(self.__devices[0])
+        return self.__devices
 
     def start(self):
-        self.__timer = threading.Timer(self.timer_interval, self.timer_OnTick())
+        self.__timer = threading.Timer(self.timer_interval, self.timer_OnTick)
+        self.__timer.start()
         self.__attached = True
 
     def stop(self):
@@ -350,12 +338,10 @@ class hidTest:
         """
 
 
-    def __hID_Write(self, bufer: bytearray) -> None:
-        bufer[0] = (2)
-        self.__device.WriteReport( HidReport( self.__report_length,HidDeviceData(  bufer,HidDeviceData.ReadStatus.SUCCESS)))
-        #return buffer
-
-
+    def __hID_Write(self, buffer: bytearray) -> None:
+        buffer[0] = (2)
+        self.__device.WriteReport( HidReport( self.__report_length, HidDeviceData(  buffer, HidDeviceData.ReadStatus.SUCCESS)))
+        return buffer
 
     def timer_OnTick(self) -> None:
         # **** INPUT *****////
@@ -379,35 +365,52 @@ class hidTest:
     
     
     @staticmethod
-    def deviceRemovedHandler(self) -> None:
+    def deviceRemovedHandler(self,a=2, b=1) -> None:
         """ USB відключено(помилка) """
         self.__attached = False
     
 objDev = None
 
 try:
+
     objDev = hidTest()
 
-    #objDev.start()
+    objDev.start()
 
-    objDev.ReadDevice()
 
+
+    devices = objDev.ReadDevice()
+
+    print("Read detected device & try connect to him with product_id from correct list: ")
+
+    for device in devices:
+        print( "Device {0}", device )
+        if str(device) != '[]' :
+           if( objDev._device_vid == device[0]['vendor_id'] ) :
+                for  product_id in product_array :
+                    res = "Ok"
+                    try:
+                        device.Open()
+                        res = "Ok"
+
+                    except Exception as AnyError:
+                        print( AnyError )
+                        res = "Fail, error:" + str(AnyError)
+
+
+                    finally:
+                        print("Opening "+str(device[0]['vendor_id'])+","+str(product_id)+" result =>" +str(res))
 
     tmpDev = objDev.get_Device()
-
     if str(tmpDev) != "[]":
         vendor_idx = tmpDev[0]['vendor_id']
         product_idx = tmpDev[0]['product_id']
-        device = hid.HIDDeviceFilter(vendor_id=vendor_idx, product_id=vendor_idx).get_device()[0]
-        hid.device.open(vendor_id, product_id)
+        device.open()
 
-        hid.Device(vendor_id, product_id)().Inserted += (objDev.deviceAttachedHandler)
-        hid.Device(vendor_id, product_id)().Removed += (objDev.deviceRemoveHandler)
-        hid.Device(vendor_id, product_id)().MonitorDeviceEvents = (True)
-        hid.Device(vendor_id, product_id)().ReadReport(objDev.OnReport)
-
-
-
+        #hid.Device(vendor_id, product_id)().Inserted += (objDev.deviceAttachedHandler)
+        #hid.Device(vendor_id, product_id)().Removed += (objDev.deviceRemoveHandler)
+        #hid.Device(vendor_id, product_id)().MonitorDeviceEvents = (True)
+        #hid.Device(vendor_id, product_id)().ReadReport(objDev.OnReport)
 
     objDev.start()
 
@@ -429,5 +432,5 @@ finally:
     if objDev is None:
         pass
     else:
-        objDev.Stop()
+        objDev.stop()
 

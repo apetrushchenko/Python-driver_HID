@@ -1819,7 +1819,7 @@ class hidDev:
 
 try:
     objDev = hidDev()
-    objDev.Start()
+   // objDev.Start()
 
     objDev.ReadDevice())
 
