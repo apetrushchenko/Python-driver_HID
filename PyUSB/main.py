@@ -49,13 +49,11 @@ ep = usb.util.find_descriptor(
 
 assert ep is not None
 
-while True:
-        d = [random.randint(0, 1) for _ in range(4)]
-        print("Sended: [{}]: {}".format(ep.write(d),d))
-        sleep(0.3)
 
+d = [random.randint(0, 1) for _ in range(4)]
+print("Sended: [{}]: {}".format(ep.write(d),d))
+sleep(0.3)
 
-speed = 0
 
 sended = 0
 d = [random.randint(0, 1) for _ in range(64)]

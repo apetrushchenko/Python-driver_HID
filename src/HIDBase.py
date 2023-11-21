@@ -8,13 +8,18 @@ import sys
 import usb.core
 import usb.util
 
-from src.HidDeviceData import HidDeviceData
-from src.HidReport import HidReport
-from src.HIDBase import Utils
+from IControl import IControl
+from IHIDBase import IHIDBase
 
-# ctypes.CDLL('[my path to the DLL]\\hidapi.dll')
+from HidDeviceData import HidDeviceData
+from HidReport import HidReport
 
-class hidTest:
+
+from Utils import Utils
+
+
+
+class HIDBase(IHIDBase, IControl):
 
     def __init__(self):
 
@@ -31,13 +36,15 @@ class hidTest:
         self._c1_pid = 22352
         self._cms_pid = 22353
         self._ga_pid = 22354
-        self.product_array_pid = [ self._v1_pid, self._c1_pid, self._cms_pid, self._ga_pid]
-        self.product_array_nm  = [ "V1", "C1", "CMS", "GLA"]
+        self.product_array_pid = [self._v1_pid, self._c1_pid, self._cms_pid, self._ga_pid]
+        self.product_array_nm = ["V1", "C1", "CMS", "GLA"]
         self.__attached = False
 
         self.__report_id_read = 1
         self.__report_id_write = 2
         self.__test_tim = 0
+
+        self.PowerMotorStatus = 0 # False
 
         self.__page = 66
         self.__buffer_usb_rx = Utils.newArrayOfBytes(self.__page, 0)
@@ -61,7 +68,7 @@ class hidTest:
         self.__bit5_set = 0x20
         self.__bit6_set = 0x40
         self.__bit7_set = 0x80
-    
+
         self.__reg_1 = 1
         self.__reg_2 = 2
         self.__reg_3 = 3
@@ -110,6 +117,26 @@ class hidTest:
         self.__off = 0
         self.__timer = None
 
+    def ReadAndWriteToDevice(self, top_light_level: int, back_light_level: int, frequency: int, front_blow_level: int,
+                             back_blow_levelint: int, PWM: int = 0):
+        pass
+
+    @property
+    def TopLight(self) -> int:
+        pass
+
+    @property
+    def BackLigth(self) -> int:
+        pass
+
+    @property
+    def Frequency(self) -> int:
+        pass
+
+    @property
+    def PWMMax(self) -> int:
+        pass
+
     def open(self):
         # dev = usb.core.find(idVendor=0x03f0  , idProduct=0x0024)
         dev = usb.core.find(idVendor=0x0483, idProduct=0x5750)
@@ -153,32 +180,10 @@ class hidTest:
 
         self.__device = dev
         self.endpoint = ep
-      #  d = [random.randint(0, 1) for _ in range(4)]
+        #  d = [random.randint(0, 1) for _ in range(4)]
 
-       # print("Sended: [{}]: {}".format(ep.write(d), d))
-        #sleep(0.3)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        # print("Sended: [{}]: {}".format(ep.write(d), d))
+        # sleep(0.3)
 
         """
         sended = 0
@@ -195,22 +200,22 @@ class hidTest:
         data = dev.read(endpoint_address, length, timeout)
         """
 
-    #@property
-    def get_Device(self)->None:
+    # @property
+    def get_Device(self) -> None:
         return self.__device
 
-    #@property.setter
+    # @property.setter
     def set_Device(self, value):
         self.__device = value
 
-    #@property
-    def get_Attached(self)->bool:
+    # @property
+    def get_Attached(self) -> bool:
         return self.__attached
 
-    #@property.setter
+    # @property.setter
     def set_Attached(self, value):
-        self.__attached  = value
-        if( self.__attached ):
+        self.__attached = value
+        if (self.__attached):
             self.__timer.Start()
         else:
             self.__temer.Stop()
@@ -222,13 +227,14 @@ class hidTest:
         counter = 0
         for prod_id in self.product_array_pid:
 
-            self.__devices[ counter ] = usb.core.find(self._device_vid, prod_id )
+            self.__devices[counter] = usb.core.find(self._device_vid, prod_id)
 
             if str(self.__devices[counter]) is not None:
                 self.__devNN = self.product_array_nm[counter]
-                self.set_Device( self.__devices[ counter ])
+                self.set_Device(self.__devices[counter])
 
-            print("HID.ReadDevice(): dev = " + str(counter)+", vid="+str(self.__devices[counter])+", pid=" + str(prod_id), str(self.__devices[counter]))
+            print("HID.ReadDevice(): dev = " + str(counter) + ", vid=" + str(self.__devices[counter]) + ", pid=" + str(
+                prod_id), str(self.__devices[counter]))
             counter = counter + 1
 
         return self.__devices
@@ -240,13 +246,13 @@ class hidTest:
 
     def stop(self):
         self.__attached = False
-        self.HID_Send_Comand( 0 , 0)
+        self.HID_Send_Comand(0, 0)
 
-    def HID_Send_CMD_TopLight(self, value ):
-        self.HID_Send_Comand( self.__reg_2, int(value))
+    def HID_Send_CMD_TopLight(self, value):
+        self.HID_Send_Comand(self.__reg_2, int(value))
 
-    def HID_Send_CMD_BackLight(self, value ):
-        self.HID_Send_Comand( self.__reg_3, int(value))
+    def HID_Send_CMD_BackLight(self, value):
+        self.HID_Send_Comand(self.__reg_3, int(value))
 
     def HID_Send_CMD_CoaxLight(self, value):
         self.HID_Send_Comand(self.__reg_4, int(value))
@@ -254,21 +260,21 @@ class hidTest:
     def HID_Send_CMD_SpotLight(self, value):
         self.HID_Send_Comand(self.__reg_1, int(value))
 
-    def HID_Send_CMD_VibrationTable(self, value ):
-        #self.HID_Send_Comand( self.__reg_5, int(value))
+    def HID_Send_CMD_VibrationTable(self, value):
+        # self.HID_Send_Comand( self.__reg_5, int(value))
         pass
 
-    def HID_Send_CMD_Frequency(self, value ):
-        #self.HID_Send_Comand( self.__reg_17, int(value))
+    def HID_Send_CMD_Frequency(self, value):
+        # self.HID_Send_Comand( self.__reg_17, int(value))
         pass
 
-    def HID_Send_Comand (self, comand: int, data: int) -> None:
+    def HID_Send_Comand(self, comand: int, data: int) -> None:
 
-        #conv_array = Utils.newArrayOfBytes(4, 0)
+        # conv_array = Utils.newArrayOfBytes(4, 0)
         conv_array = data.to_bytes(4, "little")
-        control = int.from_bytes(conv_array,"little")
+        control = int.from_bytes(conv_array, "little")
 
-        if( comand == 0 ):
+        if (comand == 0):
             self.__buffer_usb_rx = Utils.newArrayOfBytes(self.__page, 0)
             self.__buffer_usb_tx = Utils.newArrayOfBytes(self.__page, 0)
 
@@ -398,44 +404,13 @@ class hidTest:
         elif (swichVal == self.__reg_60):
             self.__buffer_usb_rx[self.__reg_60] = conv_array[0]
 
-        """
-            conv_array = (.ERROR: ToInt32(?)
-            conv_array = data.to_bytes(4, "little")
-            self.__buffer_usb_rx[51] = conv_array[0]g
-            self.__buffer_usb_rx[52] = conv_array[1]
-            self.__buffer_usb_rx[53] = conv_array[2]
-            self.__buffer_usb_rx[54] = conv_array[3]
-            if (numericUpDown12.Value > numericUpDown13.Value):
-                numericUpDown12.Value = (numericUpDown13.Value)
-            conv_array = (.ERROR: ToInt32(?)
-            int
-            not supported in Python).to_bytes(4, byteorder="little")
-            self.__buffer_usb_rx[55] = conv_array[0]
-            self.__buffer_usb_rx[56] = conv_array[1]
-            if (numericUpDown13.Value < numericUpDown12.Value):
-                numericUpDown13.Value = (numericUpDown12.Value)
-            conv_array = (.ERROR: ToInt32(?)
-            int
-            not supported in Python).to_bytes(4, byteorder="little")
-            self.__buffer_usb_rx[57] = conv_array[0]
-            self.__buffer_usb_rx[58] = conv_array[1]
-            conv_array = (.ERROR: ToInt32(?)
-            int
-            not supported in Python).to_bytes(4, byteorder="little")
-            self.__buffer_usb_rx[59] = conv_array[0]
-            self.__buffer_usb_rx[60] = conv_array[1]
-            self.__buffer_usb_rx[61] = (.ToByte(comboBox1.Text)  # error )
-
-        """
-
         self.__hID_Write(self.__buffer_usb_rx)
-
 
     def __hID_Write(self, buffer: bytearray) -> None:
         buffer[0] = (2)
-        tmt = HidReport( self.__report_length, HidDeviceData(  buffer, HidDeviceData.ReadStatus.SUCCESS))
-        #self.__device.write( HidReport( self.__report_length, HidDeviceData(  buffer, HidDeviceData.ReadStatus.SUCCESS)))
-        self.__device.write(self.endpoint, buffer )
+        tmt = HidReport(self.__report_length, HidDeviceData(buffer, HidDeviceData.ReadStatus.SUCCESS))
+        # self.__device.write( HidReport( self.__report_length, HidDeviceData(  buffer, HidDeviceData.ReadStatus.SUCCESS)))
+        self.__device.write(self.endpoint, buffer)
         return buffer
 
     def timer_OnTick(self) -> None:
@@ -449,7 +424,7 @@ class hidTest:
             report(HidReport):
         """
         if (self.__attached):
-            self.__buffer_usb_tx =  report.Data
+            self.__buffer_usb_tx = report.Data
 
     @staticmethod
     def deviceAttachedHandler(self) -> None:
@@ -457,72 +432,47 @@ class hidTest:
         self.__attached = True
         self.__device.ReadReport(self.OnReport)  # error
 
-
     @staticmethod
-    def deviceRemovedHandler(self,a=2, b=1) -> None:
+    def deviceRemovedHandler(self, a=2, b=1) -> None:
         """ USB відключено(помилка) """
         self.__attached = False
 
-objDev = None
 
-try:
-    objDev = hidTest()
-    #objDev.HID_Send_CMD_TopLight(111)
+    # call IMotors *****************************************************************************************************
+    def power(self)->int:
+        if( self.PowerMotorStatus ):
+            self.HID_Send_Comand(self.__reg__50, 0x07)
+        else :
+            self.HID_Send_Comand(self.__reg__50, 0x08)
+        self.PowerMotorStatus = !self.PowerMotorStatus
+        return int( self.PowerMotorStatus )
 
-    objDev.open()
-
-    """
-    devices = objDev.ReadDevice()
-
-    print("Read detected device & try connect to him with product_id from correct list: ")
-
-    for device in devices:
-        print( "Device {0}", device )
-        if str(device) != '[]' :
-           if( objDev._device_vid == device[0]['vendor_id'] ) :
-                for  product_id in product_array :
-                    res = "Ok"
-                    try:
-                        device.Open()
-                        res = "Ok"
-
-                    except Exception as AnyError:
-                        print( AnyError )
-                        res = "Fail, error:" + str(AnyError)
-
-
-                    finally:
-                        print("Opening "+str(device[0]['vendor_id'])+","+str(product_id)+" result =>" +str(res))
-
-    tmpDev = objDev.get_Device()
-    if str(tmpDev) != "[]":
-        vendor_idx = tmpDev[0]['vendor_id']
-        product_idx = tmpDev[0]['product_id']
-        device.open()
-
-        #hid.Device(vendor_id, product_id)().Inserted += (objDev.deviceAttachedHandler)
-        #hid.Device(vendor_id, product_id)().Removed += (objDev.deviceRemoveHandler)
-        #hid.Device(vendor_id, product_id)().MonitorDeviceEvents = (True)
-        #hid.Device(vendor_id, product_id)().ReadReport(objDev.OnReport)
-    """
-
-    objDev.HID_Send_CMD_SpotLight(input("Spot light, set value as 0=500 =>"))
-    value = input( "Top light, set value as 0=500 =>"    )
-    objDev.HID_Send_CMD_TopLight(value)
-    value = input( "Back light, set value as 0=500 =>"   )
-    objDev.HID_Send_CMD_BackLight(value)
-    objDev.HID_Send_CMD_CoaxLight(input("Coax light, set value as 0=500 =>"))
-    value = input( "VibroTablet, set value as 0=500 =>"  )
-    #objDev.HID_Send_CMD_TopLight(value)
-    value = input( "Frecency, set value as 0=500 =>"     )
-    #objDev.HID_Send_CMD_TopLight(value)
-
-except Exception as AnyError:
-    print( f"Unexpected {AnyError} " )
-
-finally:
-    if objDev is None:
+    def SetMotorNumb(self, numb:int):
         pass
-    else:
-        objDev.stop()
+
+
+    def listenMotor(self):
+            self.HID_Send_Comand(self.__reg__50, 0x00)
+
+
+    def JPlus(self):
+        self.HID_Send_Comand(self.__reg__50, 0x01)
+
+    def Stop(self):
+        self.HID_Send_Comand(self.__reg__50, 0x02)
+
+    def JMinus(self):
+        self.HID_Send_Comand(self.__reg__50, 0x03)
+
+    def Abort(self):
+        self.HID_Send_Comand(self.__reg__50, 0x04)
+
+    def inc(self):
+        self.HID_Send_Comand(self.__reg__50, 0x05)
+
+    def abs(self):
+        self.HID_Send_Comand(self.__reg__50, 0x06)
+
+    def res(self):
+            self.HID_Send_Comand(self.__reg__50, 0x09)
 

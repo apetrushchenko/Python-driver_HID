@@ -1,4 +1,4 @@
-﻿from utils import Utils
+﻿from src.HIDBase import Utils
 from Misc import RefOutArgWrapper
 from HidDeviceData import HidDeviceData
 

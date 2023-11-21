@@ -1,5 +1,5 @@
 ﻿from enum import IntEnum
-from utils import Utils
+from HIDBase import Utils
 
 class HidDeviceData:
     
