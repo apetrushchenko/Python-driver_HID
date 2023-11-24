@@ -1,8 +1,4 @@
 import threading
-
-import usb.core
-import usb.util
-
 import sys
 
 import usb.core
@@ -11,111 +7,39 @@ import usb.util
 from IControl import IControl
 from IHIDBase import IHIDBase
 
-from HidDeviceData import HidDeviceData
-from HidReport import HidReport
+#from HidDeviceData import HidDeviceData
+#from HidReport import HidReport
 
 
 from Utils import Utils
+from src.IMotor import IMotor
 
 
-
-class HIDBase(IHIDBase, IControl):
+class HIDBase(IHIDBase, IControl, IMotor):
 
     def __init__(self):
 
         self.timer_interval = 10
 
-        self.__report_length = 64
+        self.__device = None  # our divice
+        self.__devices = None # list of anabled devices
+        self.endpoint = None  # this param for divice.Write( endpoint, ... )
 
-        self.__device = None
-        self.__devices = None
-        self.endpoint = None
-        self._device_vid = 1155
-        self._device_pid = 22352
-        self._v1_pid = 22351
-        self._c1_pid = 22352
-        self._cms_pid = 22353
-        self._ga_pid = 22354
-        self.product_array_pid = [self._v1_pid, self._c1_pid, self._cms_pid, self._ga_pid]
-        self.product_array_nm = ["V1", "C1", "CMS", "GLA"]
         self.__attached = False
 
-        self.__report_id_read = 1
-        self.__report_id_write = 2
-        self.__test_tim = 0
 
-        self.PowerMotorStatus = 0 # False
+        self.__buffer_usb_rx = Utils.newArrayOfBytes(HID_CONST.PAGE, 0) # array/buffer for write to HID
+        self.__buffer_usb_tx = Utils.newArrayOfBytes(HID_CONST.PAGE, 0)
 
-        self.__page = 66
-        self.__buffer_usb_rx = Utils.newArrayOfBytes(self.__page, 0)
-        self.__buffer_usb_tx = Utils.newArrayOfBytes(self.__page, 0)
-        self.__output0_bit = 0
-        self.__output1_bit = 0
-        self.__output2_bit = 0
-        self.__bit0_res = 0xFE
-        self.__bit1_res = 0xFD
-        self.__bit2_res = 0xFB
-        self.__bit3_res = 0xF7
-        self.__bit4_res = 0xEF
-        self.__bit5_res = 0xDF
-        self.__bit6_res = 0xBF
-        self.__bit7_res = 0x7F
-        self.__bit0_set = 0x01
-        self.__bit1_set = 0x02
-        self.__bit2_set = 0x04
-        self.__bit3_set = 0x08
-        self.__bit4_set = 0x10
-        self.__bit5_set = 0x20
-        self.__bit6_set = 0x40
-        self.__bit7_set = 0x80
-
-        self.__reg_1 = 1
-        self.__reg_2 = 2
-        self.__reg_3 = 3
-        self.__reg_4 = 4
-        self.__reg_5 = 5
-        self.__reg_6 = 6
-        self.__reg_7 = 7
-        self.__reg_8 = 8
-        self.__reg_9 = 9
-        self.__reg_10 = 10
-        self.__reg_11 = 11
-        self.__reg_12 = 12
-        self.__reg_13 = 13
-        self.__reg_14 = 14
-        self.__reg_15 = 15
-        self.__reg_16 = 16
-        self.__reg_17 = 17
-        self.__reg_30 = 30
-        self.__reg_31 = 31
-        self.__reg_32 = 32
-        self.__reg_33 = 33
-        self.__reg_34 = 34
-        self.__reg_35 = 35
-        self.__reg_36 = 36
-        self.__reg_37 = 37
-        self.__reg_38 = 38
-        self.__reg_39 = 39
-        self.__reg_40 = 40
-        self.__reg_41 = 41
-        self.__reg_42 = 42
-        self.__reg_43 = 43
-        self.__reg_44 = 44
-        self.__reg_45 = 45
-        self.__reg_46 = 46
-        self.__reg_47 = 47
-        self.__reg_48 = 48
-        self.__reg_49 = 49
-        self.__reg_50 = 50
-        self.__reg_51 = 51
-        self.__reg_52 = 55
-        self.__reg_53 = 57
-        self.__reg_54 = 59
-        self.__reg_59 = 59
-        self.__reg_60 = 60
-        self.__on = 0xFFFF
-        self.__off = 0
         self.__timer = None
+
+        self.PowerMotorStatus =  False
+        self.__positon_of_motor = 10
+        self.read = 0
+        self.__speed_max = 3000
+        self.__speed_min = 100
+        self.__acceler  = 500
+        self.__curr_motor_id = 1
 
     def ReadAndWriteToDevice(self, top_light_level: int, back_light_level: int, frequency: int, front_blow_level: int,
                              back_blow_levelint: int, PWM: int = 0):
@@ -185,20 +109,6 @@ class HIDBase(IHIDBase, IControl):
         # print("Sended: [{}]: {}".format(ep.write(d), d))
         # sleep(0.3)
 
-        """
-        sended = 0
-        d = [random.randint(0, 1) for _ in range(64)]
-        timestamp = int(time.time())
-
-        for _ in range(100000):
-            sended += ep.write(d)
-
-        timestamp2 = int(time.time())
-        print("Speed: {} Bps".format(sended / (timestamp2 - timestamp)))
-
-        # Зчитайте дані з пристрою
-        data = dev.read(endpoint_address, length, timeout)
-        """
 
     # @property
     def get_Device(self) -> None:
@@ -249,23 +159,23 @@ class HIDBase(IHIDBase, IControl):
         self.HID_Send_Comand(0, 0)
 
     def HID_Send_CMD_TopLight(self, value):
-        self.HID_Send_Comand(self.__reg_2, int(value))
+        self.HID_Send_Comand(HID_CONST.REG_2, int(value))
 
     def HID_Send_CMD_BackLight(self, value):
-        self.HID_Send_Comand(self.__reg_3, int(value))
+        self.HID_Send_Comand(HID_CONST.REG_3, int(value))
 
     def HID_Send_CMD_CoaxLight(self, value):
-        self.HID_Send_Comand(self.__reg_4, int(value))
+        self.HID_Send_Comand(HID_CONST.REG_4, int(value))
 
     def HID_Send_CMD_SpotLight(self, value):
-        self.HID_Send_Comand(self.__reg_1, int(value))
+        self.HID_Send_Comand(HID_CONST.REG_1, int(value))
 
     def HID_Send_CMD_VibrationTable(self, value):
-        # self.HID_Send_Comand( self.__reg_5, int(value))
+        # self.HID_Send_Comand( HID_CONST.REG_5, int(value))
         pass
 
     def HID_Send_CMD_Frequency(self, value):
-        # self.HID_Send_Comand( self.__reg_17, int(value))
+        # self.HID_Send_Comand( HID_CONST.REG_17, int(value))
         pass
 
     def HID_Send_Comand(self, comand: int, data: int) -> None:
@@ -275,140 +185,148 @@ class HIDBase(IHIDBase, IControl):
         control = int.from_bytes(conv_array, "little")
 
         if (comand == 0):
-            self.__buffer_usb_rx = Utils.newArrayOfBytes(self.__page, 0)
-            self.__buffer_usb_tx = Utils.newArrayOfBytes(self.__page, 0)
+            self.__buffer_usb_rx = Utils.newArrayOfBytes(HID_CONST.PAGE, 0)
+            self.__buffer_usb_tx = Utils.newArrayOfBytes(HID_CONST.PAGE, 0)
 
-        self.__buffer_usb_rx[self.__reg_40] = (0)
+        self.__buffer_usb_rx[HID_CONST.REG_40] = (0)
         self.__buffer_usb_rx[50] = (0)
 
         swichVal = comand
         if (swichVal == 0):
-            self.__buffer_usb_rx = Utils.newArrayOfBytes(self.__page, 0)
-            self.__buffer_usb_tx = Utils.newArrayOfBytes(self.__page, 0)
+            self.__buffer_usb_rx = Utils.newArrayOfBytes(HID_CONST.PAGE, 0)
+            self.__buffer_usb_tx = Utils.newArrayOfBytes(HID_CONST.PAGE, 0)
             pass
-        elif (swichVal == self.__reg_1):
+        elif (swichVal == HID_CONST.REG_1):
             self.__buffer_usb_rx[1] = conv_array[0]
             self.__buffer_usb_rx[2] = conv_array[1]
-        elif (swichVal == self.__reg_2):
+        elif (swichVal == HID_CONST.REG_2):
             self.__buffer_usb_rx[3] = conv_array[0]
             self.__buffer_usb_rx[4] = conv_array[1]
-        elif (swichVal == self.__reg_3):
+        elif (swichVal == HID_CONST.REG_3):
             self.__buffer_usb_rx[5] = conv_array[0]
             self.__buffer_usb_rx[6] = conv_array[1]
-        elif (swichVal == self.__reg_4):
+        elif (swichVal == HID_CONST.REG_4):
             self.__buffer_usb_rx[7] = conv_array[0]
             self.__buffer_usb_rx[8] = conv_array[1]
-        elif (swichVal == self.__reg_5):
+        elif (swichVal == HID_CONST.REG_5):
             self.__buffer_usb_rx[9] = conv_array[0]
             self.__buffer_usb_rx[10] = conv_array[1]
-        elif (swichVal == self.__reg_6):
+        elif (swichVal == HID_CONST.REG_6):
             self.__buffer_usb_rx[11] = conv_array[0]
             self.__buffer_usb_rx[12] = conv_array[1]
-        elif (swichVal == self.__reg_7):
+        elif (swichVal == HID_CONST.REG_7):
             self.__buffer_usb_rx[13] = conv_array[0]
             self.__buffer_usb_rx[14] = conv_array[1]
-        elif (swichVal == self.__reg_8):
+        elif (swichVal == HID_CONST.REG_8):
             self.__buffer_usb_rx[15] = conv_array[0]
             self.__buffer_usb_rx[16] = conv_array[1]
-        elif (swichVal == self.__reg_9):
+        elif (swichVal == HID_CONST.REG_9):
             self.__buffer_usb_rx[17] = conv_array[0]
             self.__buffer_usb_rx[18] = conv_array[1]
-        elif (swichVal == self.__reg_10):
+        elif (swichVal == HID_CONST.REG_10):
             self.__buffer_usb_rx[19] = conv_array[0]
             self.__buffer_usb_rx[20] = conv_array[1]
-        elif (swichVal == self.__reg_11):
+        elif (swichVal == HID_CONST.REG_11):
             self.__buffer_usb_rx[21] = conv_array[0]
             self.__buffer_usb_rx[22] = conv_array[1]
-        elif (swichVal == self.__reg_12):
+        elif (swichVal == HID_CONST.REG_12):
             self.__buffer_usb_rx[23] = conv_array[0]
             self.__buffer_usb_rx[24] = conv_array[1]
-        elif (swichVal == self.__reg_13):
+        elif (swichVal == HID_CONST.REG_13):
             self.__buffer_usb_rx[25] = conv_array[0]
             self.__buffer_usb_rx[26] = conv_array[1]
-        elif (swichVal == self.__reg_14):
+        elif (swichVal == HID_CONST.REG_14):
             self.__buffer_usb_rx[27] = conv_array[0]
             self.__buffer_usb_rx[28] = conv_array[1]
-        elif (swichVal == self.__reg_15):
+        elif (swichVal == HID_CONST.REG_15):
             self.__buffer_usb_rx[29] = conv_array[0]
             self.__buffer_usb_rx[30] = conv_array[1]
-        elif (swichVal == self.__reg_16):
-            self.__buffer_usb_rx[self.__reg_45] = conv_array[0]
-            self.__buffer_usb_rx[self.__reg_46] = conv_array[1]
-        elif (swichVal == self.__reg_17):
-            self.__buffer_usb_rx[self.__reg_47] = conv_array[0]
-            self.__buffer_usb_rx[self.__reg_48] = conv_array[1]
+        elif (swichVal == HID_CONST.REG_16):
+            self.__buffer_usb_rx[HID_CONST.REG_45] = conv_array[0]
+            self.__buffer_usb_rx[HID_CONST.REG_46] = conv_array[1]
+        elif (swichVal == HID_CONST.REG_17):
+            self.__buffer_usb_rx[HID_CONST.REG_47] = conv_array[0]
+            self.__buffer_usb_rx[HID_CONST.REG_48] = conv_array[1]
 
-        elif (swichVal == self.__reg_33):
-            self.__buffer_usb_rx[self.__reg_33] = conv_array[0]
-        elif (swichVal == self.__reg_34):
-            self.__buffer_usb_rx[self.__reg_34] = conv_array[0]
-        elif (swichVal == self.__reg_35):
-            self.__buffer_usb_rx[self.__reg_35] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_33):
+            self.__buffer_usb_rx[HID_CONST.REG_33] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_34):
+            self.__buffer_usb_rx[HID_CONST.REG_34] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_35):
+            self.__buffer_usb_rx[HID_CONST.REG_35] = conv_array[0]
 
-        elif (swichVal == self.__reg_36):
-            self.__buffer_usb_rx[self.__reg_36] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_36):
+            self.__buffer_usb_rx[HID_CONST.REG_36] = conv_array[0]
 
-        elif (swichVal == self.__reg_37):
-            self.__buffer_usb_rx[self.__reg_37] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_37):
+            self.__buffer_usb_rx[HID_CONST.REG_37] = conv_array[0]
 
-        elif (swichVal == self.__reg_38):
-            self.__buffer_usb_rx[self.__reg_38] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_38):
+            self.__buffer_usb_rx[HID_CONST.REG_38] = conv_array[0]
 
-        elif (swichVal == self.__reg_39):
-            self.__buffer_usb_rx[self.__reg_39] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_39):
+            self.__buffer_usb_rx[HID_CONST.REG_39] = conv_array[0]
 
-        elif (swichVal == self.__reg_40):
-            self.__buffer_usb_rx[self.__reg_40] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_40):
+            self.__buffer_usb_rx[HID_CONST.REG_40] = conv_array[0]
 
-        elif (swichVal == self.__reg_41):
-            self.__buffer_usb_rx[self.__reg_41] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_41):
+            self.__buffer_usb_rx[HID_CONST.REG_41] = conv_array[0]
 
-        elif (swichVal == self.__reg_42):
-            self.__buffer_usb_rx[self.__reg_42] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_42):
+            self.__buffer_usb_rx[HID_CONST.REG_42] = conv_array[0]
 
-        elif (swichVal == self.__reg_43):
-            self.__buffer_usb_rx[self.__reg_43] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_43):
+            self.__buffer_usb_rx[HID_CONST.REG_43] = conv_array[0]
 
-        elif (swichVal == self.__reg_44):
-            self.__buffer_usb_rx[self.__reg_44] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_44):
+            self.__buffer_usb_rx[HID_CONST.REG_44] = conv_array[0]
 
-        elif (swichVal == self.__reg_47):
-            self.__buffer_usb_rx[self.__reg_47] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_47):
+            self.__buffer_usb_rx[HID_CONST.REG_47] = conv_array[0]
 
-        elif (swichVal == self.__reg_48):
-            self.__buffer_usb_rx[self.__reg_48] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_48):
+            self.__buffer_usb_rx[HID_CONST.REG_48] = conv_array[0]
 
-        elif (swichVal == self.__reg_49):
-            self.__buffer_usb_rx[self.__reg_49] = conv_array[0]
+        elif (swichVal == HID_CONST.REG_49):
+            self.__buffer_usb_rx[HID_CONST.REG_49] = conv_array[0]
+        
+        # motors *****************************************************************************************************
+        elif (swichVal == HID_CONST.REG_50):
 
-        elif (swichVal == self.__reg_50):
-            self.__buffer_usb_rx[self.__reg_50] = conv_array[0]
-        elif (swichVal == self.__reg_50):
-            self.__buffer_usb_rx[self.__reg_51] = conv_array[0]
-        elif (swichVal == self.__reg_51):
-            self.__buffer_usb_rx[self.__reg_52] = conv_array[0]
-        elif (swichVal == self.__reg_52):
-            self.__buffer_usb_rx[self.__reg_53] = conv_array[0]
-        elif (swichVal == self.__reg_53):
-            self.__buffer_usb_rx[self.__reg_54] = conv_array[0]
-        elif (swichVal == self.__reg_54):
-            self.__buffer_usb_rx[self.__reg_55] = conv_array[0]
-        elif (swichVal == self.__reg_55):
-            self.__buffer_usb_rx[self.__reg_56] = conv_array[0]
-        elif (swichVal == self.__reg_56):
-            self.__buffer_usb_rx[self.__reg_57] = conv_array[0]
-        elif (swichVal == self.__reg_57):
-            self.__buffer_usb_rx[self.__reg_58] = conv_array[0]
-        elif (swichVal == self.__reg_58):
-            self.__buffer_usb_rx[self.__reg_59] = conv_array[0]
-        elif (swichVal == self.__reg_60):
-            self.__buffer_usb_rx[self.__reg_60] = conv_array[0]
+            self.__buffer_usb_rx[HID_CONST.REG_50] = conv_array[0]
 
-        self.__hID_Write(self.__buffer_usb_rx)
+            position_array = self.__positon_of_motor.to_bytes(4, "little")
+            self.__buffer_usb_rx[HID_CONST.REG_51] = position_array[0]
+            self.__buffer_usb_rx[HID_CONST.REG_52] = position_array[1]
+            self.__buffer_usb_rx[HID_CONST.REG_53] = position_array[2]
+            self.__buffer_usb_rx[HID_CONST.REG_54] = position_array[3]
+
+            # set speed max
+            spin_max_array = self.__speed_max.to_bytes(4, "little")
+            self.__buffer_usb_rx[HID_CONST.REG_55] = spin_max_array[0]
+            self.__buffer_usb_rx[HID_CONST.REG_56] = spin_max_array[1]
+
+            # set speed min
+            spin_min_array = self.__speed_min.to_bytes(4, "little")
+            self.__buffer_usb_rx[HID_CONST.REG_57] = spin_min_array[0]
+            self.__buffer_usb_rx[HID_CONST.REG_58] = spin_min_array[1]
+
+            # set acceler
+            acceler_array = self.__acceler.to_bytes(4, "little")
+            self.__buffer_usb_rx[HID_CONST.REG_59] = acceler_array[0]
+            self.__buffer_usb_rx[HID_CONST.REG_60] = acceler_array[1]
+
+            # set number of motor
+            motor_id_array = self.__curr_motor_id.to_bytes(4, "little")
+            mn = motor_id_array[0]
+            self.__buffer_usb_rx[HID_CONST.REG_61] = motor_id_array[0]
+
+        self.__hID_Write( self.__buffer_usb_rx )
 
     def __hID_Write(self, buffer: bytearray) -> None:
         buffer[0] = (2)
-        tmt = HidReport(self.__report_length, HidDeviceData(buffer, HidDeviceData.ReadStatus.SUCCESS))
+        #tmt = HidReport(self.__report_length, HidDeviceData(buffer, HidDeviceData.ReadStatus.SUCCESS))
         # self.__device.write( HidReport( self.__report_length, HidDeviceData(  buffer, HidDeviceData.ReadStatus.SUCCESS)))
         self.__device.write(self.endpoint, buffer)
         return buffer
@@ -418,7 +336,7 @@ class HIDBase(IHIDBase, IControl):
             pass
 
     @staticmethod
-    def onReport(self, report: HidReport) -> None:
+    def onReport(self, report) -> None:
         """ Читати USB буфер
         Args:
             report(HidReport):
@@ -437,42 +355,204 @@ class HIDBase(IHIDBase, IControl):
         """ USB відключено(помилка) """
         self.__attached = False
 
-
     # call IMotors *****************************************************************************************************
+    def Prepare_CMD_Motor(self, cmd, motor_number, position, spid_max, spid_min, acceler ):
+
+        #self.__buffer_usb_rx =  self.__buffer_usb_rx  #Utils.newArrayOfBytes(HID_CONST.PAGE, 0)
+
+        self.__buffer_usb_rx[HID_CONST.REG_50] = cmd
+
+        position_array = position.to_bytes(4, "little")
+        self.__buffer_usb_rx[HID_CONST.REG_51] = position_array[0]
+        self.__buffer_usb_rx[HID_CONST.REG_52] = position_array[1]
+        self.__buffer_usb_rx[HID_CONST.REG_53] = position_array[2]
+        self.__buffer_usb_rx[HID_CONST.REG_54] = position_array[3]
+
+        # set speed max
+        spin_max_array = spid_max.to_bytes(4, "little")
+        self.__buffer_usb_rx[HID_CONST.REG_55] = spin_max_array[0]
+        self.__buffer_usb_rx[HID_CONST.REG_56] = spin_max_array[1]
+
+        # set speed min
+        spin_min_array = spid_min.to_bytes(4, "little")
+        self.__buffer_usb_rx[HID_CONST.REG_57] = spin_min_array[0]
+        self.__buffer_usb_rx[HID_CONST.REG_58] = spin_min_array[1]
+
+        # set acceler
+        acceler_array = acceler. to_bytes(4, "little")
+        self.__buffer_usb_rx[HID_CONST.REG_57] = acceler_array[0]
+        self.__buffer_usb_rx[HID_CONST.REG_58] = acceler_array[1]
+
+        # set number of motor
+        self.__buffer_usb_rx[HID_CONST.REG_61] = motor_number.to_byte(4, "littele")[0]
+        return   self.__buffer_usb_rx
+
     def power(self)->int:
-        if( self.PowerMotorStatus ):
-            self.HID_Send_Comand(self.__reg__50, 0x07)
+        if( not self.PowerMotorStatus ):
+            self.HID_Send_Comand(HID_CONST.REG_50, 0x07)
+            self.PowerMotorStatus = True
         else :
-            self.HID_Send_Comand(self.__reg__50, 0x08)
-        self.PowerMotorStatus = !self.PowerMotorStatus
+            self.HID_Send_Comand(HID_CONST.REG_50, 0x08)
+            self.PowerMotorStatus = False
         return int( self.PowerMotorStatus )
 
     def SetMotorNumb(self, numb:int):
-        pass
-
-
-    def listenMotor(self):
-            self.HID_Send_Comand(self.__reg__50, 0x00)
-
+        self.HID_Send_Comand(HID_CONST.REG_61, numb )
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x00)
+        
+    def listenMotor(self, numb:int):
+        self.HID_Send_Comand(HID_CONST.REG_61, numb)
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x00)
 
     def JPlus(self):
-        self.HID_Send_Comand(self.__reg__50, 0x01)
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x01)
 
     def Stop(self):
-        self.HID_Send_Comand(self.__reg__50, 0x02)
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x02)
 
     def JMinus(self):
-        self.HID_Send_Comand(self.__reg__50, 0x03)
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x03)
 
     def Abort(self):
-        self.HID_Send_Comand(self.__reg__50, 0x04)
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x04)
 
     def inc(self):
-        self.HID_Send_Comand(self.__reg__50, 0x05)
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x05)
 
     def abs(self):
-        self.HID_Send_Comand(self.__reg__50, 0x06)
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x06)
 
     def res(self):
-            self.HID_Send_Comand(self.__reg__50, 0x09)
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x09)
+
+    def set_step(self, value : int ):
+        self.HID_Send_Comand(HID_CONST.REG_50, 0x09)
+
+    def set_motor(self, value):
+        self.__curr_motor_id = value
+        
+    def get_motor(self):
+        return self.__curr_motor_id
+
+    def set_speed_max(self, value):
+        self.__speed_max = value
+
+    def get_speed_max(self):
+        return self.__speed_max
+
+    def set_speed_min(self, value):
+        self.__speed_min = value
+
+    def get_speed_min(self):
+        return self.__speed_min
+    
+    def set_acceler(self, value):
+        self.__acceler = value
+
+    def get_acceler(self):
+        return self.__acceler
+    
+    def set_position(self, value):
+        self.__positon_of_motor = value
+
+    def get_position(self):
+        return self.__positon_of_motor
+
+
+class HID_CONST:
+    DEVICE_VID = 1155
+    DEVICE_PID = 22352
+    V1_PID = 22351
+    C1_PID = 22352
+    CMS_PID = 22353
+    GA_PID = 22354
+
+    V1_S = "V1"
+    C1_S = "C1"
+    CMS_S = "CMS"
+    GA_S = "GLA"
+
+    PRODUCT_PID_ARRAY = [V1_PID, C1_PID, CMS_PID, GA_PID]
+    PRODUCT_NM_ARRAY = [V1_S, C1_S, CMS_S, GA_S]
+
+    PAGE = 66
+
+    REPORT_LENGTH = 641
+
+    REPORT_ID_READ = 1
+    REPORT_ID_WRITE = 2
+    TEST_TIM = 0
+
+    ON = 0xFFFF
+    OFF = 0
+
+    REG_1 = 1
+    REG_2 = 2
+    REG_3 = 3
+    REG_4 = 4
+    REG_5 = 5
+    REG_6 = 6
+    REG_7 = 7
+    REG_8 = 8
+    REG_9 = 9
+    REG_10 = 10
+    REG_11 = 11
+    REG_12 = 12
+    REG_13 = 13
+    REG_14 = 14
+    REG_15 = 15
+    REG_16 = 16
+    REG_17 = 17
+    REG_30 = 30
+    REG_31 = 31
+    REG_32 = 32
+    REG_33 = 33
+    REG_34 = 34
+    REG_35 = 35
+    REG_36 = 36
+    REG_37 = 37
+    REG_38 = 38
+    REG_39 = 39
+    REG_40 = 40
+    REG_41 = 41
+    REG_42 = 42
+    REG_43 = 43
+    REG_44 = 44
+    REG_45 = 45
+    REG_46 = 46
+    REG_47 = 47
+    REG_48 = 48
+    REG_49 = 49
+    REG_50 = 50
+    REG_51 = 51
+    REG_52 = 52
+    REG_53 = 53
+    REG_54 = 54
+    REG_55 = 55
+    REG_56 = 56
+    REG_57 = 57
+    REG_58 = 58
+    REG_59 = 59
+    REG_60 = 60
+    REG_61 = 61
+
+    OUTPUT0_BIT = 0
+    OUTPUT1_BIT = 0
+    OUTPUT2_BIT = 0
+    BIT0_RES = 0xFE
+    BIT1_RES = 0xFD
+    BIT2_RES = 0xFB
+    BIT3_RES = 0xF7
+    BIT4_RES = 0xEF
+    BIT5_RES = 0xDF
+    BIT6_RES = 0xBF
+    BIT7_RES = 0x7F
+    BIT0_SET = 0x01
+    BIT1_SET = 0x02
+    BIT2_SET = 0x04
+    BIT3_SET = 0x08
+    BIT4_SET = 0x10
+    BIT5_SET = 0x20
+    BIT6_SET = 0x40
+    BIT7_SET = 0x80
 
