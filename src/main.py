@@ -8,6 +8,8 @@ try:
 
     objDev.open()
 
+    #objDev.HID_Send_Comand(50, 0x07)
+
     if( input("Do you want test controlbox[0] or motors[1]=>") == "0" ) :
 
         objDev.HID_Send_CMD_SpotLight(input("Spot light, set value as 0=500 =>"))
@@ -26,6 +28,11 @@ try:
         if( input("Before need turn on power on[0]/off[1]=>") == "0" ):
             try:
                 objDev.power()
+                objDev.set_motor(0)
+                objDev.set_position(3000)
+                objDev.set_speed_max(60)
+                objDev.set_speed_min(600)
+                objDev.set_acceler(1000)
                 is_loop   = True
                 while (is_loop):
                     motor = int(input("Set current motor for test, as [ 0-2 / 9 exit]=>"))
@@ -33,8 +40,8 @@ try:
                         objDev.set_motor( motor)
                         objDev.set_position( int(input("Set needed position for motor =>")) )
                         if( input("Are you ready to GO [O yes/1 not]:") == "0" ):
+                            #objDev.JPlus()
                             objDev.JMinus()
-                            #objDev.JMinus()
                             if ( input(  "Stop , press 0" ) == "0"):
                                 objDev.Abort()
                             else:

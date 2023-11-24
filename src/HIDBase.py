@@ -19,7 +19,7 @@ class HIDBase(IHIDBase, IControl, IMotor):
 
     def __init__(self):
 
-        self.timer_interval = 10
+        self.timer_interval = 100
 
         self.__device = None  # our divice
         self.__devices = None # list of anabled devices
@@ -34,7 +34,7 @@ class HIDBase(IHIDBase, IControl, IMotor):
         self.__timer = None
 
         self.PowerMotorStatus =  False
-        self.__positon_of_motor = 10
+        self.__positon_of_motor = 2000
         self.read = 0
         self.__speed_max = 3000
         self.__speed_min = 100
@@ -307,7 +307,7 @@ class HIDBase(IHIDBase, IControl, IMotor):
             self.__buffer_usb_rx[HID_CONST.REG_55] = spin_max_array[0]
             self.__buffer_usb_rx[HID_CONST.REG_56] = spin_max_array[1]
 
-            # set speed min
+            # set speed minJ
             spin_min_array = self.__speed_min.to_bytes(4, "little")
             self.__buffer_usb_rx[HID_CONST.REG_57] = spin_min_array[0]
             self.__buffer_usb_rx[HID_CONST.REG_58] = spin_min_array[1]
