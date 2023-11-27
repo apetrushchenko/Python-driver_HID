@@ -1,6 +1,6 @@
 ﻿#from src.HIDBase import Utils
 from Misc import RefOutArgWrapper
-from HidDeviceData import HidDeviceData
+from __HidDeviceData import HidDeviceData
 
 def Resize(  arr1 : bytearray(), newSize : int )-> None:
 

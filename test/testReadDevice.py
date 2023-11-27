@@ -8,8 +8,8 @@ import sys
 import usb.core
 import usb.util
 
-from src.HidDeviceData import HidDeviceData
-from src.HidReport import HidReport
+from src.__HidDeviceData import HidDeviceData
+from src.__HidReport import HidReport
 from src.HIDBase import Utils
 
 # ctypes.CDLL('[my path to the DLL]\\hidapi.dll')
