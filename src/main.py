@@ -1,9 +1,15 @@
+from src.ControlBox import ConcreteControl
 from src.HIDBase import HIDBase
+from src.Motors import ConcreteMotors
 
 objDev = None
 
 try:
-    objDev = HIDBase()
+
+    cb = ConcreteControl()
+    motors = ConcreteMotors()
+
+    objDev = HIDBase( cb, motors )
     # objDev.HID_Send_CMD_TopLight(111)
 
     objDev.open()

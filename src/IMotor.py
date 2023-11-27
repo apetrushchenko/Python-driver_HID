@@ -34,10 +34,34 @@ class IMotor(ABC):
     def abs(self):
         pass
 
-    @abstractmethod
-    def listenMotor(self):
-        pass
+    #@abstractmethod
+    #def listenMotor(self):
+    #   pass
 
     @abstractmethod
     def res(self):
+        pass
+
+    @property
+    @abstractmethod
+    def position(self)->int:
+        pass
+
+    @property
+    @abstractmethod
+    def motor_id(self)->int:
+        pass
+    @property
+    @abstractmethod
+    def speed_max(self) -> int:
+        pass
+
+    @property
+    @abstractmethod
+    def speed_min(self) -> int:
+        pass
+
+    @property
+    @abstractmethod
+    def  ACC(self) -> int:
         pass
