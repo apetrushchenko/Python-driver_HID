@@ -7,21 +7,41 @@ class ConcreteMotors( IMotor ):
     def position(self) -> int:
         return self.__position
 
+    @position.setter
+    def set_position(self, value):
+        self.__position = value
+
     @property
     def motor_id(self) -> int:
         return self.__curr_motor_id
+
+    @motor_id.setter
+    def set_motor_id(self, value):
+        self.__motor_id = value
 
     @property
     def speed_max(self) -> int:
         return self.__speed_max
 
+    @speed_max.setter
+    def set_speed_max(self, value ):
+        self.__speed_max = value
+
     @property
     def speed_min(self) -> int:
         return self.__speed_min
 
+    @speed_min.setter
+    def set_speed_min(self, value ):
+        self.__speed_min = value
+
     @property
     def ACC(self) -> int:
         return self.__acceler
+
+    @ACC.setter
+    def set_ACC(self, value ):
+        self.__acceler = value
 
     def __init__(self, buffer = None):
         self.__buffer_usb_rx = buffer
@@ -34,17 +54,19 @@ class ConcreteMotors( IMotor ):
         self.read = 0
 
 
+
     def set_buffer(self, buffer ):
         self.__buffer_usb_rx = buffer
 
     def power(self) -> bool:
+        res = (HID_CONST.REG_50, -3 )
         if (not self.__motor_power_status):
-            self.HID_Send_Comand(HID_CONST.REG_50, 0x07)
+            res = (HID_CONST.REG_50, 0x07)
             self.__motor_power_status = True
         else:
-            self.HID_Send_Comand(HID_CONST.REG_50, 0x08)
+            res = (HID_CONST.REG_50,  0x08)
             self.__motor_power_status = False
-        return int(self.__motor_power_status)
+        return res
 
     def SetMotorNumb(self, numb: int)->int:                                                # ret tulip ( command, data )
         #        self.curr_motor_id = numb;
@@ -80,9 +102,7 @@ class ConcreteMotors( IMotor ):
         #self.HID_Send_Comand(HID_CONST.REG_50, 0x09)
         return (HID_CONST.REG_50, 0x09)
 
-    def set_step(self, value: int):
-        #self.HID_Send_Comand(HID_CONST.REG_50, 0x09)
-        return (HID_CONST.REG_50, 0x09)
+
 
 
 

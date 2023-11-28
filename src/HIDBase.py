@@ -18,7 +18,6 @@ from src.IMotor import IMotor
 
 class HIDBase(IHIDBase):
 
-
     def __init__(self, control : IControl , motors : IMotor = None):
 
         self.__buffer_usb_rx = Utils.newArrayOfBytes(HID_CONST.PAGE, 0)  # array/buffer for write to HID
@@ -46,6 +45,12 @@ class HIDBase(IHIDBase):
 
         self.__timer = None
 
+    def __del__(self):
+        if (self.__control):
+            del self.__control
+
+        if (self.__motors):
+            del self.__motors
 
     def open(self):
         # dev = usb.core.find(idVendor=0x03f0  , idProduct=0x0024)
@@ -321,9 +326,8 @@ class HIDBase(IHIDBase):
         """ USB відключено(помилка) """
         self.__attached = False
 
-    # call IMotors *****************************************************************************************************
 
-    # implementation methods  IControl *******************************************************************************
+    # Proxy for  IControl **********************************************************************************************
     def HID_Send_CMD_TopLight(self, value):
         if (self.__control) :
             cmd_data = self.__control.set_TopLigth( value )
@@ -339,8 +343,7 @@ class HIDBase(IHIDBase):
         if (self.__control):
             cmd_data = self.__control.set_CoaxLigth(value)
             self.HID_Send_Comand(cmd_data[0], cmd_data[1])
-
-    def HID_Send_CMD_SpotLight(self, value):
+    def HID_Send_CMD_SpotLight(self, value : int ):
         if (self.__control):
             cmd_data = self.__control.set_SpotLigth(value)
             self.HID_Send_Comand(cmd_data[0], cmd_data[1])
@@ -362,102 +365,109 @@ class HIDBase(IHIDBase):
         self.HID_Send_CMD_Frequency(frequency)
         # ...
 
-        #self.__buffer_usb_rx =  self.__buffer_usb_rx  #Utils.newArrayOfBytes(HID_CONST.PAGE, 0)
+    # Proxy for IMotors ************************************************************************************************
 
-        self.__buffer_usb_rx[HID_CONST.REG_50] = cmd
-
-        position_array = position.to_bytes(4, "little")
-        self.__buffer_usb_rx[HID_CONST.REG_51] = position_array[0]
-        self.__buffer_usb_rx[HID_CONST.REG_52] = position_array[1]
-        self.__buffer_usb_rx[HID_CONST.REG_53] = position_array[2]
-        self.__buffer_usb_rx[HID_CONST.REG_54] = position_array[3]
-
-        # set speed max
-        spin_max_array = spid_max.to_bytes(4, "little")
-        self.__buffer_usb_rx[HID_CONST.REG_55] = spin_max_array[0]
-        self.__buffer_usb_rx[HID_CONST.REG_56] = spin_max_array[1]
-
-        # set speed min
-        spin_min_array = spid_min.to_bytes(4, "little")
-        self.__buffer_usb_rx[HID_CONST.REG_57] = spin_min_array[0]
-        self.__buffer_usb_rx[HID_CONST.REG_58] = spin_min_array[1]
-
-        # set acceler
-        acceler_array = acceler. to_bytes(4, "little")
-        self.__buffer_usb_rx[HID_CONST.REG_57] = acceler_array[0]
-        self.__buffer_usb_rx[HID_CONST.REG_58] = acceler_array[1]
-
-        # set number of motor
-        self.__buffer_usb_rx[HID_CONST.REG_61] = motor_number.to_byte(4, "littele")[0]
-        return   self.__buffer_usb_rx
-
-    def power(self)->int:
-         return self.__motors.power() if self.__motors else False
+    def power(self)->bool:
+        if not self.__motors is None:
+            cmd_data = self.__motors.power()
+            self.HID_Send_Comand(cmd_data[0], cmd_data[1] )
+            return True
+        else:
+            return False
 
     def SetMotorNumb(self, numb:int):
-        if self.__motors :
+        if not self.__motors is None:
            cmd_data = self.__motors.SetMotorNumb( numb )
-
-        self.HID_Send_Comand(HID_CONST.REG_61, numb )
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x00)
+           self.HID_Send_Comand(cmd_data[0], cmd_data[1] )
+       # self.HID_Send_Comand(HID_CONST.REG_50, 0x00)
         
     def listenMotor(self, numb:int):
-        self.HID_Send_Comand(HID_CONST.REG_61, numb)
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x00)
+        if not self.__motors is None:
+           cmd_data = self.__motors.SetMotorNumb( numb )
+           self.HID_Send_Comand(cmd_data[0], cmd_data[1] )
 
     def JPlus(self):
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x01)
+        if not self.__motors is None:
+            cmd_data = self.__motors.JPlus()
+            self.HID_Send_Comand(cmd_data[0], cmd_data[1])
 
     def Stop(self):
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x02)
+        if not self.__motors is None:
+            cmd_data = self.__motors.Stop()
+            self.HID_Send_Comand(cmd_data[0], cmd_data[1])
 
     def JMinus(self):
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x03)
+        if not self.__motors is None:
+            cmd_data = self.__motors.JMinus()
+            self.HID_Send_Comand(cmd_data[0], cmd_data[1])
 
     def Abort(self):
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x04)
+        if not self.__motors is None:
+            cmd_data = self.__motors.Abort()
+            self.HID_Send_Comand(cmd_data[0], cmd_data[1])
 
     def inc(self):
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x05)
+        if not self.__motors is None:
+            cmd_data = self.__motors.inc()
+            self.HID_Send_Comand(cmd_data[0], cmd_data[1])
 
     def abs(self):
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x06)
+        if not self.__motors is None:
+            cmd_data = self.__motors.abs()
+            self.HID_Send_Comand(cmd_data[0], cmd_data[1])
 
     def res(self):
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x09)
+        if not self.__motors is None:
+            cmd_data = self.__motors.res()
+            self.HID_Send_Comand(cmd_data[0], cmd_data[1])
 
-    def set_step(self, value : int ):
-        self.HID_Send_Comand(HID_CONST.REG_50, 0x09)
+
+    def set_motors(self, value):
+        if not self.__motors is None:
+            self.__motor = value
+
+    def get_motors(self):
+        return self.__motors
+
+
+
+    def get_motor(self):
+        return self.__motors.motor_id
 
     def set_motor(self, value):
-        self.__motors.__motor_id = value
-        
-    def get_motor(self):
-        return self.__motors.__motor_id
+        self.__motors.motor_id = value
+
+
 
     def set_speed_max(self, value):
-        self.__motots.__speed_max = value
+        self.__motors.speed_max = value
 
     def get_speed_max(self):
-        return self.__motots.__speed_max
+        return self.__motors.speed_max
+
+
+
 
     def set_speed_min(self, value):
-        self.__motors__speed_min = value
+        self.__motors.speed_min = value
 
     def get_speed_min(self):
-        return self.__motors.__speed_min
-    
+        return self.__motors.speed_min
+
+
+
+
     def set_acceler(self, value):
-        self.__motors.__acceler = value
+        self.__motors.ACC = value
 
     def get_acceler(self):
-        return self.__motors.__acceler
-    
+        return self.__motors.ACC
+
+
+
     def set_position(self, value):
-        self.__motors.__position = value
+        self.__motors.position = value
 
     def get_position(self):
-        return self.__motors.__position
-
-
+        return self.__motors.position
 

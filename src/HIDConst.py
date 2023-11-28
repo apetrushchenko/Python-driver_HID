@@ -1,7 +1,7 @@
 
 class HID_CONST:
 
-    FNM_SERIALIZATION = "./pickle/ControlBox.pickle"
+    FNM_SERIALIZATION = "/pickle/ControlBox.pickle"
 
     DEVICE_VID = 1155
     DEVICE_PID = 22352

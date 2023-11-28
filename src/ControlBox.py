@@ -1,3 +1,5 @@
+import os.path
+
 from src.HIDConst import HID_CONST
 from src.IControlBox import IControl
 import pickle
@@ -22,7 +24,8 @@ class ConcreteControl(IControl)    :
 
     def __del__(self):
         if (self.__isNeedSave):
-            self.save()
+            #self.save()
+            pass
 
     def get_TopLight(self) -> int:
         return self.__TopLigth
@@ -102,21 +105,33 @@ class ConcreteControl(IControl)    :
         return res
 
 
-    def save(self, file_name  ):
+    def save(self, file_name = None  ):
         if (file_name is None) :
             file_name = HID_CONST.FNM_SERIALIZATION
+
+        directory = os.path.dirname( file_name )
+        if (  os.path.exists(  directory  )  ):
+            os.makedirs( directory )
 
         with open( file_name, "wb") as f:
             pickle.dump( self, f )
 
 
-    def load(self,  file_name ):
+    def load(self,  file_name = None):
         if (file_name is None):
             file_name = HID_CONST.FNM_SERIALIZATION
+
+        if( not os.path.exists( file_name ) ):
+            #raise FileExistsError("File not exist")
+            return
 
         with open( file_name , "rb") as f:
             tmp = pickle.load(f)
 
+        for attr_nm in vars(type(self)):
+            setattr(self, attr_nm, getattr(tmp, attr_nm))
+
+            """
             self.__TopLigth = tmp.__TopLigth
             self.__BackLigth = tmp.__BackLigth
             self.__CoaxLigth = tmp.__CoaxLigth
@@ -125,3 +140,4 @@ class ConcreteControl(IControl)    :
             self.__VibroTable = tmp.__VibroTable
             self.__PWMMax = tmp.__PWMMax
             self.__cmd = -2
+            """
