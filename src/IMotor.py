@@ -47,13 +47,25 @@ class IMotor(ABC):
     def position(self)->int:
         pass
 
-    @property
     @abstractmethod
-    def motor_id(self)->int:
+    def set_position(self, value) :
         pass
+
+    @abstractmethod
+    def get_motor_id(self)->int:
+        pass
+
+    @abstractmethod
+    def set_motor_id(self, value) :
+        pass
+
     @property
     @abstractmethod
     def speed_max(self) -> int:
+        pass
+
+    @abstractmethod
+    def set_speed_max(self, value) :
         pass
 
     @property
@@ -61,7 +73,15 @@ class IMotor(ABC):
     def speed_min(self) -> int:
         pass
 
+    @abstractmethod
+    def set_speed_min(self, value) :
+        pass
+
     @property
     @abstractmethod
     def  ACC(self) -> int:
+        pass
+
+    @abstractmethod
+    def set_ACC(self, value) :
         pass

@@ -28,11 +28,14 @@ try:
         if( input("Before need turn on power on[0]/off[1]=>") == "0" ):
             try:
                 dev.power()
-                dev.set_motor(0)
+                dev.set_mo
                 dev.set_position(3000)
                 dev.set_speed_max(60)
                 dev.set_speed_min(600)
                 dev.set_acceler(1000)
+                dev.Abort()
+
+                dev.Stop()
                 is_loop   = True
                 while (is_loop):
                     motor = int(input("Set current motor for test, as [ 0-2 / 9 exit]=>"))

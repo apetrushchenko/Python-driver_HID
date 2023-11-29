@@ -288,7 +288,7 @@ class HIDBase(IHIDBase):
             self.__buffer_usb_rx[HID_CONST.REG_60] = acceler_array[1]
 
             # set number of motor
-            motor_id_array = self.__curr_motor_id.to_bytes(4, "little")
+            motor_id_array = self.get_motor().to_bytes(4, "little")
             mn = motor_id_array[0]
             self.__buffer_usb_rx[HID_CONST.REG_61] = motor_id_array[0]
 
@@ -422,20 +422,14 @@ class HIDBase(IHIDBase):
             self.HID_Send_Comand(cmd_data[0], cmd_data[1])
 
 
-    def set_motors(self, value):
-        if not self.__motors is None:
-            self.__motor = value
-
-    def get_motors(self):
-        return self.__motors
 
 
 
-    def get_motor(self):
-        return self.__motors.motor_id
+    def get_motor_id(self):
+        return self.__motors.get_motor_id()
 
-    def set_motor(self, value):
-        self.__motors.motor_id = value
+    def set_motor_id(self, value):
+        self.__motors.set_motor_id(value)
 
 
 
