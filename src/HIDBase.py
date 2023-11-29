@@ -18,6 +18,15 @@ from src.IMotor import IMotor
 
 class HIDBase(IHIDBase):
 
+    # now all working but have problem this realization not correct as fine code HIDBase have dependensy injection
+    #  aS IControl & IMotors . I think next who will do refactoring must do next move logic from HiD_Send_Command(,)
+    #to IControl & IMotors
+    # ( eg  use global buffer from HIDBase and move logic (changes in this buffer ) in IControl & IMotors)
+    # or
+    # in IControl & IMotors generate array cmd - data & refresh buffer in HID_Send_Command from this array
+
+
+    # owner logica ********************************************************************************************
     def __init__(self, control : IControl , motors : IMotor = None):
 
         self.__buffer_usb_rx = Utils.newArrayOfBytes(HID_CONST.PAGE, 0)  # array/buffer for write to HID
@@ -29,8 +38,8 @@ class HIDBase(IHIDBase):
         if motors == None:
             self.__motor = None
         else:
-            motors.set_buffer( self.__buffer_usb_rx )
-            self._motor = motors
+           #motors.set_buffer( self.__buffer_usb_rx )
+            self.__motors = motors
 
 
         self.timer_interval = 100
@@ -40,8 +49,6 @@ class HIDBase(IHIDBase):
         self.endpoint = None  # this param for divice.Write( endpoint, ... )
 
         self.__attached = False
-
-
 
         self.__timer = None
 
@@ -265,35 +272,33 @@ class HIDBase(IHIDBase):
 
             self.__buffer_usb_rx[HID_CONST.REG_50] = conv_array[0]
 
-
-            position_array = (self.__motors.position if self.__motors is not None else 0).to_bytes(4, "little")
+            position_array = (self.motors.position if self.motors is not None else 0).to_bytes(4, "little")
             self.__buffer_usb_rx[HID_CONST.REG_51] = position_array[0]
             self.__buffer_usb_rx[HID_CONST.REG_52] = position_array[1]
             self.__buffer_usb_rx[HID_CONST.REG_53] = position_array[2]
             self.__buffer_usb_rx[HID_CONST.REG_54] = position_array[3]
 
             # set speed max
-            spin_max_array = (self.__motors.speed_max if self.__motors is not None else 0).to_bytes(4, "little")
+            spin_max_array = (self.motors.speed_max if self.motors is not None else 0).to_bytes(4, "little")
             self.__buffer_usb_rx[HID_CONST.REG_55] = spin_max_array[0]
             self.__buffer_usb_rx[HID_CONST.REG_56] = spin_max_array[1]
 
             # set speed minJ
-            spin_min_array = (self.__motors.speed_min if self.__motors is not None else 0).to_bytes(4, "little")
+            spin_min_array = (self.motors.speed_min if self.motors is not None else 0).to_bytes(4, "little")
             self.__buffer_usb_rx[HID_CONST.REG_57] = spin_min_array[0]
             self.__buffer_usb_rx[HID_CONST.REG_58] = spin_min_array[1]
 
             # set acceler
-            acceler_array = (self.__motors.ACC if self.__motors is not None else 0).to_bytes(4, "little")
+            acceler_array = (self.motors.ACC if self.motors is not None else 0).to_bytes(4, "little")
             self.__buffer_usb_rx[HID_CONST.REG_59] = acceler_array[0]
             self.__buffer_usb_rx[HID_CONST.REG_60] = acceler_array[1]
 
             # set number of motor
-            motor_id_array = self.get_motor().to_bytes(4, "little")
+            motor_id_array = self.motor_id.to_bytes(4, "little")
             mn = motor_id_array[0]
             self.__buffer_usb_rx[HID_CONST.REG_61] = motor_id_array[0]
 
         self.__hID_Write(self.__buffer_usb_rx)
-
 
     def __hID_Write(self, buffer: bytearray) -> None:
         buffer[0] = (2)
@@ -306,14 +311,16 @@ class HIDBase(IHIDBase):
         if (len(self.__buffer_usb_tx) > 60):
             pass
 
-    @staticmethod
-    def onReport(self, report) -> None:
-        """ Читати USB буфер
-        Args:
-            report(HidReport):
-        """
+    """
+    #@staticmethod
+    #def onReport(self, report) -> None:
+        # Читати USB буфер
+        #Args:
+        #    report(HidReport):
         if (self.__attached):
             self.__buffer_usb_tx = report.Data
+        """
+
 
     @staticmethod
     def deviceAttachedHandler(self) -> None:
@@ -338,11 +345,11 @@ class HIDBase(IHIDBase):
             cmd_data = self.__control.set_BackLigth(value)
             self.HID_Send_Comand( cmd_data[0], cmd_data[1] )
 
-
     def HID_Send_CMD_CoaxLight(self, value):
         if (self.__control):
             cmd_data = self.__control.set_CoaxLigth(value)
             self.HID_Send_Comand(cmd_data[0], cmd_data[1])
+
     def HID_Send_CMD_SpotLight(self, value : int ):
         if (self.__control):
             cmd_data = self.__control.set_SpotLigth(value)
@@ -366,7 +373,6 @@ class HIDBase(IHIDBase):
         # ...
 
     # Proxy for IMotors ************************************************************************************************
-
     def power(self)->bool:
         if not self.__motors is None:
             cmd_data = self.__motors.power()
@@ -422,46 +428,57 @@ class HIDBase(IHIDBase):
             self.HID_Send_Comand(cmd_data[0], cmd_data[1])
 
 
+    # property for make some changes ***************************************************************************
 
+    @property
+    def motors(self):
+        return self.__motors
 
+    # next property using as proxy this class from IMotors
 
-    def get_motor_id(self):
-        return self.__motors.get_motor_id()
+    @property
+    def motor_id(self):
+        return self.motors.motor_id
 
-    def set_motor_id(self, value):
-        self.__motors.set_motor_id(value)
+    @motor_id.setter
+    def motor_id(self, value):
+        self.motors.set_motor_id = value
 
-
-
-    def set_speed_max(self, value):
-        self.__motors.speed_max = value
-
-    def get_speed_max(self):
+    @property
+    def speed_max(self):
         return self.__motors.speed_max
 
+    @speed_max.setter
+    def speed_max(self, value):
+        self.__motors.speed_max = value
 
 
 
-    def set_speed_min(self, value):
-        self.__motors.speed_min = value
 
-    def get_speed_min(self):
+    @property
+    def speed_min(self):
         return self.__motors.speed_min
 
+    @speed_min.setter
+    def speed_min(self, value):
+        self.__motors.speed_min = value
 
 
 
-    def set_acceler(self, value):
-        self.__motors.ACC = value
-
-    def get_acceler(self):
+    @property
+    def ACC(self):
         return self.__motors.ACC
 
+    @ACC.setter
+    def ACC(self, value):
+        self.__motors.ACC = value
 
+    @property
+    def position(self):
+        return self.__motors.position
 
-    def set_position(self, value):
+    @position.setter
+    def position(self, value):
         self.__motors.position = value
 
-    def get_position(self):
-        return self.__motors.position
 

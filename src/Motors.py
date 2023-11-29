@@ -4,25 +4,28 @@ from src.IMotor import IMotor
 class ConcreteMotors( IMotor ):
 
     @property
+    def motor_id(self) -> int:
+        return self.__motor_id
+
+    @motor_id.setter
+    def set_motor_id(self, value):
+        self.__motor_id = value
+
+    @property
     def position(self) -> int:
         return self.__position
 
     @position.setter
-    def set_position(self, value):
+    def position(self, value):
         self.__position = value
 
-    def get_motor_id(self) -> int:
-        return self.__motor_id
-
-    def set_motor_id(self, value):
-        self.__motor_id = value
 
     @property
     def speed_max(self) -> int:
         return self.__speed_max
 
     @speed_max.setter
-    def set_speed_max(self, value ):
+    def speed_max(self, value ):
         self.__speed_max = value
 
     @property
@@ -30,7 +33,7 @@ class ConcreteMotors( IMotor ):
         return self.__speed_min
 
     @speed_min.setter
-    def set_speed_min(self, value ):
+    def speed_min(self, value ):
         self.__speed_min = value
 
     @property
@@ -38,7 +41,7 @@ class ConcreteMotors( IMotor ):
         return self.__acceler
 
     @ACC.setter
-    def set_ACC(self, value ):
+    def ACC(self, value ):
         self.__acceler = value
 
     def __init__(self, buffer = None):

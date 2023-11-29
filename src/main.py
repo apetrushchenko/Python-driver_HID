@@ -28,19 +28,21 @@ try:
         if( input("Before need turn on power on[0]/off[1]=>") == "0" ):
             try:
                 dev.power()
-                dev.set_mo
-                dev.set_position(3000)
-                dev.set_speed_max(60)
-                dev.set_speed_min(600)
-                dev.set_acceler(1000)
-                dev.Abort()
+                dev.motor_id = 0
+                dev.position = 3000
+                dev.speed_max = 60
+                dev.speed_min = 600
+                dev.ACC = 1000
 
+                dev.Abort()   # try funcs abort/stop wrote are correct
                 dev.Stop()
+
                 is_loop   = True
                 while (is_loop):
                     motor = int(input("Set current motor for test, as [ 0-2 / 9 exit]=>"))
                     if(motor != 9):
-                        dev.set_motor( motor)
+                        dev.get_Device()
+                        dev.motor_id = motor
                        # dev.set_position( int(input("Set needed position for motor =>")) )
                         if( input("Are you ready to GO [O yes/1 not]:") == "0" ):
                             #dev.JPlus()
