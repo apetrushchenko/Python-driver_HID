@@ -1,4 +1,3 @@
-import threading
 import sys
 
 import usb.core
@@ -20,7 +19,7 @@ class HIDBase(IHIDBase):
 
     # now all working but have problem this realization not correct as fine code HIDBase have dependensy injection
     #  aS IControl & IMotors . I think next who will do refactoring must do next move logic from HiD_Send_Command(,)
-    #to IControl & IMotors
+    # to IControl & IMotors
     # ( eg  use global buffer from HIDBase and move logic (changes in this buffer ) in IControl & IMotors)
     # or
     # in IControl & IMotors generate array cmd - data & refresh buffer in HID_Send_Command from this array
@@ -41,6 +40,7 @@ class HIDBase(IHIDBase):
            #motors.set_buffer( self.__buffer_usb_rx )
             self.__motors = motors
 
+        self.status = False # not ready
 
         self.timer_interval = 100
 
@@ -60,54 +60,59 @@ class HIDBase(IHIDBase):
             del self.__motors
 
     def open(self):
-        # dev = usb.core.find(idVendor=0x03f0  , idProduct=0x0024)
-        dev = usb.core.find(idVendor=0x0483, idProduct=0x5750)
-        vid = dev.idVendor
-        pid = dev.idProduct
-        prt = dev.parent
+        try :
+            dev = usb.core.find(idVendor=0x0483, idProduct=0x5750)
 
-        # was it found?
-        if dev is None:
-            raise ValueError('Device not found')
+            # was it found?
+            if dev is None:
+                raise Exception ('HID device with idVendor=0x0483, idProduct=0x5750, not found !!!')
 
-        # ep = dev[0].interfaces()[1].endpoints()[0]
+            vid = dev.idVendor
+            pid = dev.idProduct
+            prt = dev.parent
 
-        i = 0  # i = dev[0].interfaces()[0].bInterfaceNumber
+            # ep = dev[0].interfaces()[1].endpoints()[0]
 
-        dev.reset()
+            i = 0  # i = dev[0].interfaces()[0].bInterfaceNumber
 
-        if dev.is_kernel_driver_active(i):
-            try:
-                dev.detach_kernel_driver(i)
-            except usb.core.USBError as e:
-                sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(i, str(e)))
+            dev.reset()
 
-        # set the active configuration. With no arguments, the first
-        # configuration will be the active o1231ne
-        dev.set_configuration()
+            if dev.is_kernel_driver_active(i):
+                try:
+                    dev.detach_kernel_driver(i)
+                except usb.core.USBError as e:
+                    sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(i, str(e)))
 
-        # get an endpoint instance
-        cfg = dev.get_active_configuration()
-        intf = cfg[(0, 0)]
+            # set the active configuration. With no arguments, the first
+            # configuration will be the active o1231ne
+            dev.set_configuration()
 
-        ep = usb.util.find_descriptor(
-            intf,
-            # match the first OUT endpoint
-            custom_match= \
-                lambda e: \
-                    usb.util.endpoint_direction(e.bEndpointAddress) == \
-                    usb.util.ENDPOINT_OUT)
+            # get an endpoint instance
+            cfg = dev.get_active_configuration()
+            intf = cfg[(0, 0)]
 
-        assert ep is not None
+            ep = usb.util.find_descriptor(
+                intf,
+                # match the first OUT endpoint
+                custom_match= \
+                    lambda e: \
+                        usb.util.endpoint_direction(e.bEndpointAddress) == \
+                        usb.util.ENDPOINT_OUT)
 
-        self.__device = dev
-        self.endpoint = ep
-        #  d = [random.randint(0, 1) for _ in range(4)]
+            assert ep is not None
 
-        # print("Sended: [{}]: {}".format(ep.write(d), d))
-        # sleep(0.3)
+            self.__device = dev
+            self.endpoint = ep
+            #  d = [random.randint(0, 1) for _ in range(4)]
+        except Exception as er:
+            print ("Error: HIDBase::open(): " + str(er) )
+            self.status = False
+            return self.status
 
-    # @property
+        self.status = True
+        return self.status
+
+        # @property
     def get_Device(self) -> None:
         return self.__device
 
@@ -153,7 +158,8 @@ class HIDBase(IHIDBase):
 
     def stop(self):
         self.__attached = False
-        self.HID_Send_Comand(0, 0)
+        if self.status :
+            self.HID_Send_Comand(0, 0)
 
     def HID_Send_Comand(self, comand: int, data: int) -> None:
         # conv_array = Utils.newArrayOfBytes(4, 0)
@@ -302,9 +308,16 @@ class HIDBase(IHIDBase):
 
     def __hID_Write(self, buffer: bytearray) -> None:
         buffer[0] = (2)
-        # tmt = HidReport(self.__report_length, HidDeviceData(buffer, HidDeviceData.ReadStatus.SUCCESS))
-        # self.__device.write( HidReport( self.__report_length, HidDeviceData(  buffer, HidDeviceData.ReadStatus.SUCCESS)))
-        self.__device.write(self.endpoint, buffer)
+        try :
+            if self.status == True :
+                self.__device.write(self.endpoint, buffer)
+            else:
+                print("Error: Try write to closing device !!! " )
+
+        except Exception as err:
+            print( "Error in process write to device !!! \n" + str(err) )
+
+
         return buffer
 
     def timer_OnTick(self) -> None:
