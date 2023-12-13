@@ -8,7 +8,7 @@ try:
     cb     = ConcreteControl(True)
     motors = ConcreteMotors()
 
-    dev = HIDBase( cb, motors )
+    dev    = HIDBase( cb, motors )
     # dev.HID_Send_CMD_TopLight(111)
 
     if dev.open() :
