@@ -1,7 +1,7 @@
 import os.path
 
 from src.HIDConst import HID_CONST
-from src.IControlBox import IControl
+from src.interfaces.HID.IControlBox import IControl
 import pickle
 
 

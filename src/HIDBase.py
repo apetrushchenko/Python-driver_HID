@@ -1,18 +1,14 @@
 import sys
+import threading
 
 import usb.core
 import usb.util
 
-from IControlBox import IControl
-from IHIDBase import IHIDBase
-
-#from HidDeviceData import HidDeviceData
-#from HidReport import HidReport
-
-
-from Utils import Utils
 from src.HIDConst import HID_CONST
-from src.IMotor import IMotor
+from src.Utils import Utils
+from src.interfaces.HID.IControlBox import IControl
+from src.interfaces.HID.IHIDBase import IHIDBase
+from src.interfaces.motors.IMotor import IMotor
 
 
 class HIDBase(IHIDBase):

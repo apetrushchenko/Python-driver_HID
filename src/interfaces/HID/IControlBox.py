@@ -9,7 +9,7 @@ class IControl(ABC):
           pass
 
      @abstractmethod
-     def set_TopLigth(self, new_value)->int:                           # save value & return command foe write to HID
+     def set_TopLigth(self, new_value)->int:                           # save value & return command foe write to __HID
           pass
 
      @abstractmethod
@@ -17,7 +17,7 @@ class IControl(ABC):
           pass
 
      @abstractmethod
-     def set_BackLigth(self, value)->int:                              # save value & return command foe write to HID
+     def set_BackLigth(self, value)->int:                              # save value & return command foe write to __HID
           pass
 
      @abstractmethod
@@ -25,7 +25,7 @@ class IControl(ABC):
           pass
 
      @abstractmethod
-     def set_CoaxLigth(self, value) ->int:                             # save value & return command foe write to HID
+     def set_CoaxLigth(self, value) ->int:                             # save value & return command foe write to __HID
           pass
 
      @abstractmethod
@@ -33,7 +33,7 @@ class IControl(ABC):
           pass
 
      @abstractmethod
-     def set_SpotLigth(self, value) ->int:                            # save value & return command foe write to HID
+     def set_SpotLigth(self, value) ->int:                            # save value & return command foe write to __HID
           pass
 
 
@@ -42,14 +42,14 @@ class IControl(ABC):
           pass
 
      @abstractmethod
-     def set_Frequency(self, value)->int:                              # save value & return command foe write to HID
+     def set_Frequency(self, value)->int:                              # save value & return command foe write to __HID
           pass
 
      @abstractmethod
      def get_PWMMax(self)->int:      # return property value
           pass
      @abstractmethod
-     def set_PWMMax(self, value)->int:                                # save value & return command foe write to HID
+     def set_PWMMax(self, value)->int:                                # save value & return command foe write to __HID
           pass
 
      @abstractmethod
@@ -57,7 +57,7 @@ class IControl(ABC):
           pass
 
      @abstractmethod
-     def set_VibrationTable(self, value)->int:                        # save value & return command foe write to HID
+     def set_VibrationTable(self, value)->int:                        # save value & return command foe write to __HID
           pass
 
      #@abstractmethod

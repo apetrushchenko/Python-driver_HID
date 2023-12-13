@@ -1,5 +1,5 @@
 from src.HIDConst import HID_CONST
-from src.IMotor import IMotor
+from src.interfaces.motors.IMotor import IMotor
 
 class ConcreteMotors( IMotor ):
 
